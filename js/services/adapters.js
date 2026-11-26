@@ -273,7 +273,7 @@ export function toProduct(dto, fallbackOverlay = {}) {
     images = [
       imagePath.startsWith("http")
         ? imagePath
-        : `http://localhost:8081${imagePath.startsWith("/") ? "" : "/"}${imagePath}`,
+        : `https://mayflower-aspect-profusely.ngrok-free.dev${imagePath.startsWith("/") ? "" : "/"}${imagePath}`,
     ];
   } else if (
     Array.isArray(fallbackOverlay.images) &&

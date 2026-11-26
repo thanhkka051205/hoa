@@ -5,7 +5,7 @@
 
 export const API_CONFIG = {
   // Cổng mặc định của Backend Spring Boot theo application.properties
-  BASE_URL: 'http://localhost:8081/api',
+  BASE_URL: 'https://mayflower-aspect-profusely.ngrok-free.dev/api',
 
   // Mặc định sẵn sàng kết nối trực tiếp Backend (Backend có gì lấy nấy)
   USE_API: true,
