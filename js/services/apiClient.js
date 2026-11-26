@@ -40,6 +40,7 @@ async function request(
 ) {
   const headers = {
     "Content-Type": "application/json",
+    "ngrok-skip-browser-warning": "true",
   };
 
   const token = tokenManager.get(scope);
@@ -420,9 +421,13 @@ export const apiClient = {
 
   // Áp dụng mã giảm giá (nếu BE có endpoint kiểm tra/tính giảm giá)
   async applyCoupon(code, sumAmount) {
-    const normalizedCode = String(code || '').trim().toUpperCase();
+    const normalizedCode = String(code || "")
+      .trim()
+      .toUpperCase();
     const numericAmount = Number(sumAmount ?? 0);
-    const safeAmount = Number.isFinite(numericAmount) ? Math.max(0, numericAmount) : 0;
+    const safeAmount = Number.isFinite(numericAmount)
+      ? Math.max(0, numericAmount)
+      : 0;
 
     const params = new URLSearchParams({
       code: normalizedCode,
@@ -430,8 +435,8 @@ export const apiClient = {
     });
 
     return await request(`/coupons/apply?${params.toString()}`, {
-      method: 'POST',
-      scope: 'client',
+      method: "POST",
+      scope: "client",
     });
   },
 
