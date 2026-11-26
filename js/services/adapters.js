@@ -1,8 +1,8 @@
 /**
- * Adapter chuyển đổi dữ liệu chuẩn giữa Backend PhaHang Spring Boot DTO và Frontend UI Model
- * Repo tham chiếu: https://github.com/thanhkka051205/PhaHang
- * Nguyên tắc: Zero Runtime Mock Data & 100% SRS Field Compliance (DEC-006 / DEC-008 / TASK-032)
- * Backend thiếu gì FE chuẩn hóa theo Schema SRS v5.2, không dùng dữ liệu mock ảo.
+- Adapter chuyển đổi dữ liệu chuẩn giữa Backend PhaHang Spring Boot DTO và Frontend UI Model
+- Repo tham chiếu: https://github.com/thanhkka051205/PhaHang
+- Nguyên tắc: Zero Runtime Mock Data & 100% SRS Field Compliance (DEC-006 / DEC-008 / TASK-032)
+- Backend thiếu gì FE chuẩn hóa theo Schema SRS v5.2, không dùng dữ liệu mock ảo.
  */
 import {
   CORE_CATEGORIES,
@@ -16,122 +16,39 @@ import {
   createCouponSchema,
 } from "../models/srsSchemas.js";
 
-const DEFAULT_CATEGORY_REVENUE = [
-  {
-    name: "Ti vi Smart 4K & OLED",
-    dotClass: "bg-blue-500",
-    emoji: "📺",
-    soldText: "18 chiếc",
-    revenue: 270000000,
-  },
-  {
-    name: "Điều hòa Inverter",
-    dotClass: "bg-cyan-500",
-    emoji: "❄️",
-    soldText: "14 bộ",
-    revenue: 145000000,
-  },
-  {
-    name: "Tủ lạnh Side by Side",
-    dotClass: "bg-emerald-500",
-    emoji: "🧊",
-    soldText: "6 chiếc",
-    revenue: 95000000,
-  },
-  {
-    name: "Quạt làm mát",
-    dotClass: "bg-amber-500",
-    emoji: "💨",
-    soldText: "22 chiếc",
-    revenue: 22000000,
-  },
-  {
-    name: "Nồi cơm điện tử",
-    dotClass: "bg-purple-500",
-    emoji: "🍚",
-    soldText: "12 nồi",
-    revenue: 28000000,
-  },
-];
-
-const DEFAULT_TOP_PRODUCTS = [
-  {
-    rank: 1,
-    name: "Smart Tivi OLED Sony 4K 55 inch",
-    categoryName: "Ti vi",
-    sold: 8,
-    revenue: 144000000,
-  },
-  {
-    rank: 2,
-    name: "Điều hòa Daikin Inverter 9000 BTU",
-    categoryName: "Điều hòa",
-    sold: 9,
-    revenue: 85500000,
-  },
-  {
-    rank: 3,
-    name: "Tủ lạnh Aqua Inverter 322 lít",
-    categoryName: "Tủ lạnh",
-    sold: 4,
-    revenue: 36800000,
-  },
-  {
-    rank: 4,
-    name: "Quạt đứng Senko DR1608 có điều khiển",
-    categoryName: "Quạt",
-    sold: 18,
-    revenue: 10800000,
-  },
-  {
-    rank: 5,
-    name: "Nồi cơm điện tử cao tần Cuckoo 1.8L",
-    categoryName: "Nồi cơm điện",
-    sold: 7,
-    revenue: 24500000,
-  },
-];
-
 export function toDashboardStats(raw = {}) {
   const data = raw || {};
-  const categoryStats =
-    Array.isArray(data.categoryStats || data.revenueByCategory) &&
-    (data.categoryStats || data.revenueByCategory).length > 0
-      ? (data.categoryStats || data.revenueByCategory).map((item, idx) => {
-          const fallback =
-            DEFAULT_CATEGORY_REVENUE[idx] || DEFAULT_CATEGORY_REVENUE[0];
-          return {
-            name: item.categoryName ?? item.name ?? fallback.name,
-            dotClass: item.dotClass ?? fallback.dotClass,
-            emoji: item.emoji ?? fallback.emoji,
-            soldText:
-              item.soldText ??
-              (item.soldCount != null
-                ? `${item.soldCount} chiếc`
-                : fallback.soldText),
-            revenue: Number(
-              item.revenue ?? item.totalRevenue ?? fallback.revenue,
-            ),
-          };
-        })
-      : DEFAULT_CATEGORY_REVENUE;
+  const rawCategories = Array.isArray(
+    data.categoryStats || data.revenueByCategory,
+  )
+    ? data.categoryStats || data.revenueByCategory
+    : [];
 
-  const topProducts =
-    Array.isArray(data.topProducts) && data.topProducts.length > 0
-      ? data.topProducts.map((item, idx) => ({
-          rank: item.rank ?? idx + 1,
-          name: item.productName ?? item.name ?? "",
-          categoryName: item.categoryName ?? item.category ?? "",
-          sold: Number(item.sold ?? item.soldCount ?? 0),
-          revenue: Number(item.revenue ?? item.totalRevenue ?? 0),
-        }))
-      : DEFAULT_TOP_PRODUCTS;
+  const categoryStats = rawCategories.map((item) => ({
+    name: item.categoryName ?? item.name ?? "",
+    dotClass: item.dotClass ?? "bg-blue-500",
+    emoji: item.emoji ?? "",
+    soldText:
+      item.soldText ??
+      (item.soldCount != null ? `${item.soldCount} chiếc` : "0 chiếc"),
+    revenue: Number(item.revenue ?? item.totalRevenue ?? 0),
+  }));
+
+  const topProducts = Array.isArray(data.topProducts)
+    ? data.topProducts.map((item, idx) => ({
+        rank: item.rank ?? idx + 1,
+        name: item.productName ?? item.name ?? "",
+        categoryName: item.categoryName ?? item.category ?? "",
+        sold: Number(item.sold ?? item.soldCount ?? 0),
+        revenue: Number(item.revenue ?? item.totalRevenue ?? 0),
+      }))
+    : [];
 
   return {
-    revenueMonth: Number(data.revenueMonth ?? data.monthlyRevenue ?? 560000000),
-    totalOrders: Number(data.totalOrders ?? data.orderCount ?? 42),
-    avgOrderValue: Number(data.avgOrderValue ?? 13330000),
-    totalStock: Number(data.totalStock ?? data.stockCount ?? 186),
+    revenueMonth: Number(data.revenueMonth ?? data.monthlyRevenue ?? 0),
+    totalOrders: Number(data.totalOrders ?? data.orderCount ?? 0),
+    avgOrderValue: Number(data.avgOrderValue ?? 0),
+    totalStock: Number(data.totalStock ?? data.stockCount ?? 0),
     categoryStats,
     topProducts,
   };
@@ -186,8 +103,8 @@ function getCategoryBasePrice(catId, catName = "") {
 }
 
 /**
- * Chuyển CategoryResponseDTO sang Model FE
- * Backend: { categoryId: Integer, name: String }
+- Chuyển CategoryResponseDTO sang Model FE
+- Backend: { categoryId: Integer, name: String }
  */
 export function toCategory(dto) {
   if (!dto) return null;
@@ -200,7 +117,7 @@ export function toCategory(dto) {
 }
 
 /**
- * Chuyển Category Model FE sang payload gửi Backend
+- Chuyển Category Model FE sang payload gửi Backend
  */
 export function fromCategory(model) {
   return {
@@ -210,11 +127,10 @@ export function fromCategory(model) {
 }
 
 /**
- * Chuyển ProductResponseDTO sang Model FE theo chuẩn BA SRS v5.2 (DEC-008 / TASK-032)
- * Ưu tiên dữ liệu thật từ Backend; nếu Backend thiếu trường nào (price, images, variants, specs),
- * FE tự động chuẩn hóa các giá trị mặc định có kiểu an toàn theo chuẩn SRS v5.2, không phụ thuộc vào mockData.
+- Chuyển ProductResponseDTO sang Model FE theo chuẩn BA SRS v5.2 (DEC-008 / TASK-032)
+- Ưu tiên dữ liệu thật từ Backend; nếu Backend thiếu trường nào (price, images, variants, specs),
+- FE tự động chuẩn hóa các giá trị mặc định có kiểu an toàn theo chuẩn SRS v5.2, không phụ thuộc vào mockData.
  */
-
 export function toProduct(dto, fallbackOverlay = {}) {
   if (!dto) return null;
 
@@ -336,11 +252,10 @@ export function toProduct(dto, fallbackOverlay = {}) {
             { name: "Tình trạng", value: "Mới 100% nguyên đai nguyên kiện" },
           ];
 
-  // 100% SRS compliance flags
   const hasPrice = true;
   const hasImages = true;
   const hasVariants = true;
-  const canPurchase = true; // Luôn mở khóa đặt hàng theo SRS
+  const canPurchase = true;
 
   return {
     id: id,
@@ -378,14 +293,14 @@ export function toProduct(dto, fallbackOverlay = {}) {
 }
 
 /**
- * Export hàm enrichProduct ánh xạ DTO chuẩn Zero-Mock
+- Export hàm enrichProduct ánh xạ DTO chuẩn Zero-Mock
  */
 export function enrichProduct(dto, fallbackOverlay = {}) {
   return toProduct(dto, fallbackOverlay);
 }
 
 /**
- * Chuyển Product Model FE sang payload gửi Backend ProductController (POST / PUT)
+- Chuyển Product Model FE sang payload gửi Backend ProductController (POST / PUT)
  */
 export function fromProduct(model) {
   return {
@@ -403,7 +318,7 @@ export function fromProduct(model) {
 }
 
 /**
- * Chuẩn hóa role từ Backend / localStorage về tập giá trị FE: 'CUSTOMER' | 'STAFF' | 'ADMIN'
+- Chuẩn hóa role từ Backend / localStorage về tập giá trị FE: 'CUSTOMER' | 'STAFF' | 'ADMIN'
  */
 export function normalizeRole(raw) {
   const normalized = String(raw || "")
@@ -417,7 +332,7 @@ export function normalizeRole(raw) {
 }
 
 /**
- * Chuyển role FE sang role Spring Security Backend
+- Chuyển role FE sang role Spring Security Backend
  */
 export function denormalizeRole(role) {
   const map = {
@@ -429,7 +344,7 @@ export function denormalizeRole(role) {
 }
 
 /**
- * Mở bọc RestResponse<T> ({ statusCode, message, data }) từ Backend nếu có
+- Mở bọc RestResponse<T> ({ statusCode, message, data }) từ Backend nếu có
  */
 export function unwrapRestResponse(body) {
   if (
@@ -449,9 +364,9 @@ export function unwrapRestResponse(body) {
 }
 
 /**
- * Bóc tách phản hồi danh sách hỗ trợ cả 2 dạng:
- * 1. ResultPaginationalDTO từ Backend Spring Boot mới: { meta: { page, pageSize, pages, total }, result: [...] }
- * 2. Mảng phẳng (REST API cũ hoặc Mock array): [...]
+- Bóc tách phản hồi danh sách hỗ trợ cả 2 dạng:
+- 1. ResultPaginationalDTO từ Backend Spring Boot mới: { meta: { page, pageSize, pages, total }, result: [...] }
+- 2. Mảng phẳng (REST API cũ hoặc Mock array): [...]
  */
 export function unwrapPaginated(raw, mapperFn = (x) => x) {
   const body = unwrapRestResponse(raw);
@@ -459,7 +374,6 @@ export function unwrapPaginated(raw, mapperFn = (x) => x) {
     return { items: [], meta: { page: 1, pageSize: 12, pages: 1, total: 0 } };
   }
 
-  // Dạng 1: ResultPaginationalDTO { meta, result }
   if (
     body &&
     typeof body === "object" &&
@@ -484,7 +398,6 @@ export function unwrapPaginated(raw, mapperFn = (x) => x) {
     };
   }
 
-  // Dạng 2: Mảng phẳng thông thường
   const arr = Array.isArray(body)
     ? body
     : Array.isArray(body.content)
@@ -503,8 +416,8 @@ export function unwrapPaginated(raw, mapperFn = (x) => x) {
 }
 
 /**
- * Chuyển User Entity sang Model FE
- * Backend: { userId: Integer, fullName: String, email: String, phone: String, role: String, status: Boolean, createdAt: String }
+- Chuyển User Entity sang Model FE
+- Backend: { userId: Integer, fullName: String, email: String, phone: String, role: String, status: Boolean, createdAt: String }
  */
 export function toUser(entity) {
   if (!entity) return null;
@@ -523,7 +436,7 @@ export function toUser(entity) {
 }
 
 /**
- * Chuyển ResLoginDTO ({ accessToken, user }) sang session FE
+- Chuyển ResLoginDTO ({ accessToken, user }) sang session FE
  */
 export function toLoginSession(resLogin) {
   return {
@@ -533,7 +446,7 @@ export function toLoginSession(resLogin) {
 }
 
 /**
- * Chuyển User Model FE sang payload gửi Backend UserController
+- Chuyển User Model FE sang payload gửi Backend UserController
  */
 export function fromUser(model) {
   return {
@@ -548,8 +461,8 @@ export function fromUser(model) {
 }
 
 /**
- * Chuyển AddressResponseDTO sang Model FE
- * Backend: { addressId: Integer, receiverName: String, receiverPhone: String, addressDetail: String, isDefault: Boolean }
+- Chuyển AddressResponseDTO sang Model FE
+- Backend: { addressId: Integer, receiverName: String, receiverPhone: String, addressDetail: String, isDefault: Boolean }
  */
 export function toAddress(dto) {
   if (!dto) return null;
@@ -564,7 +477,7 @@ export function toAddress(dto) {
 }
 
 /**
- * Chuyển Address Model FE sang payload gửi Backend AddressController
+- Chuyển Address Model FE sang payload gửi Backend AddressController
  */
 export function fromAddress(model, userId = null) {
   return {
@@ -578,13 +491,27 @@ export function fromAddress(model, userId = null) {
 }
 
 /**
- * Chuyển Warranty Model FE sang payload gửi Backend WarrantyController
+- Chuẩn hóa Warranty DTO / Entity sang Model FE (hỗ trợ cả seriNo và serialNumber)
  */
 export function toWarranty(raw) {
   if (!raw || typeof raw !== "object") return null;
+
+  const seriNo =
+    raw.seriNo ??
+    raw.serialNo ??
+    raw.serialNumber ??
+    raw.serial_number ??
+    raw.imei ??
+    raw.item?.seriNo ??
+    raw.item?.serialNo ??
+    raw.warrantyItem?.seriNo ??
+    raw.warrantyItem?.serialNo ??
+    "";
+
   return {
     id: raw.warrantyId ?? raw.id ?? null,
-    serialNumber: raw.serialNumber ?? raw.serial_number ?? "",
+    seriNo,
+    serialNumber: seriNo,
     productName: raw.productName ?? raw.product?.name ?? "Thiết bị điện máy",
     orderId: raw.orderId ?? raw.order?.orderId ?? "",
     customerName:
@@ -599,7 +526,7 @@ export function toWarranty(raw) {
 }
 
 /**
- * Chuyển Coupon Model FE sang payload gửi Backend CouponController
+- Chuyển Coupon DTO / Entity sang Model FE khớp CouponDTO phía Backend
  */
 export function toCoupon(raw) {
   if (!raw || typeof raw !== "object") return null;

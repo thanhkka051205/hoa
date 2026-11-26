@@ -1,6 +1,6 @@
 /**
- * API Client kết nối Backend Spring Boot PhaHang
- * Repo tham chiếu: https://github.com/thanhkka051205/PhaHang
+- API Client kết nối Backend Spring Boot PhaHang
+- Repo tham chiếu: https://github.com/thanhkka051205/PhaHang
  */
 import { API_CONFIG } from "../config/apiConfig.js";
 import { toUser, unwrapRestResponse } from "./adapters.js";
@@ -320,8 +320,6 @@ export const apiClient = {
   },
 
   // CartItemController (/api/cart)
-
-  // Giỏ hàng
   async getCart() {
     return await request("/cart", { scope: "client" });
   },
@@ -369,6 +367,15 @@ export const apiClient = {
     });
   },
 
+  // Lấy danh sách đơn hàng của khách hàng hiện tại
+  async getMyOrders() {
+    return await request("/orders/my", {
+      method: "GET",
+      requireAuth: true,
+      scope: "client",
+    });
+  },
+
   // Lấy chi tiết đơn hàng của khách hàng
   async getOrderById(orderId) {
     if (!orderId) {
@@ -394,12 +401,21 @@ export const apiClient = {
     });
   },
 
-  async lookupWarranty({ serialNumber = "", phone = "" } = {}) {
+  // Tra cứu bảo hành công khai theo SĐT hoặc số seri
+  async lookupWarranty({ phone = "", serialNo = "" } = {}) {
     const params = new URLSearchParams();
-    if (serialNumber) params.set("serialNumber", serialNumber.trim());
-    if (phone) params.set("phone", phone.trim());
-    return await request(`/warranties/lookup?${params.toString()}`, {
+    if (phone && String(phone).trim()) {
+      params.set("phone", String(phone).trim());
+    }
+    if (serialNo && String(serialNo).trim()) {
+      params.set("serialNo", String(serialNo).trim());
+    }
+
+    const qs = params.toString();
+    return await request(`/warranties/lookup${qs ? `?${qs}` : ""}`, {
+      method: "GET",
       requireAuth: false,
+      scope: "client",
     });
   },
 

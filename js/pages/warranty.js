@@ -1,23 +1,41 @@
 /**
- * Script Tra Cứu Bảo Hành Điện Tử Chính Hãng (warranty.html)
- * Chuẩn Wireframe Hình 14 SRS, NFR-02.3, FR-12, UC-12
- * Tái tạo 100% diện mạo và class Tailwind từ commit 1a9e3c2
+- Script Tra Cứu Bảo Hành Điện Tử Chính Hãng (warranty.html)
+- Chuẩn Wireframe Hình 14 SRS, NFR-02.3, FR-12, UC-12
+- Tái tạo 100% diện mạo và class Tailwind từ commit 1a9e3c2
  */
-import { mountHeader } from '../components/header.js';
-import { mountFooter } from '../components/footer.js';
-import { mockService } from '../services/mockService.js';
-import { formatDate } from '../core/format.js';
-import { esc, getQueryParam } from '../core/dom.js';
-import { renderBackendGapBanner } from '../core/backendGaps.js';
+import { mountHeader } from "../components/header.js";
+import { mountFooter } from "../components/footer.js";
+import { apiClient } from "../services/apiClient.js";
+import { toWarranty } from "../services/adapters.js";
+import { formatDate } from "../core/format.js";
+import { esc, getQueryParam } from "../core/dom.js";
+import { toast } from "../components/toast.js";
+
+function unwrapWarrantyList(res) {
+  if (!res) return [];
+  if (Array.isArray(res)) return res;
+  if (Array.isArray(res.data)) return res.data;
+  if (Array.isArray(res.result)) return res.result;
+  if (Array.isArray(res.content)) return res.content;
+  if (Array.isArray(res.items)) return res.items;
+  if (res.found && res.data) return [res.data];
+  if (
+    typeof res === "object" &&
+    (res.warrantyId || res.serialNo || res.serialNumber || res.seriNo)
+  ) {
+    return [res];
+  }
+  return [];
+}
 
 export function initWarrantyPage() {
   mountHeader();
   mountFooter();
 
-  const container = document.getElementById('warranty-lookup-container');
+  const container = document.getElementById("warranty-lookup-container");
   if (!container) return;
 
-  const urlSerial = getQueryParam('serial') || '';
+  const urlSerial = getQueryParam("serial") || "";
 
   container.innerHTML = `
     <div class="max-w-3xl mx-auto space-y-8">
@@ -48,7 +66,7 @@ export function initWarrantyPage() {
                   type="text"
                   id="warranty-input"
                   value="${esc(urlSerial)}"
-                  placeholder="Ví dụ: SN-SNY-2026-001 hoặc 0988123456"
+                  placeholder="Ví dụ: SN-IPHONE16PRO-8899 hoặc 0901000003"
                   class="w-full h-12 pl-10 pr-4 rounded-xl border border-slate-200 text-xs sm:text-sm font-semibold focus:border-[#DC2626] outline-hidden shadow-2xs font-mono"
                   required
                 />
@@ -66,11 +84,11 @@ export function initWarrantyPage() {
 
           <div class="flex flex-wrap items-center gap-2 text-[11px] text-slate-500 pt-1">
             <span class="font-semibold text-slate-600">Gợi ý mẫu tra cứu:</span>
-            <button type="button" class="quick-serial-btn font-mono text-[#DC2626] hover:underline" data-val="SN-SAM-55DU-849102">SN-SAM-55DU-849102</button>
+            <button type="button" class="quick-serial-btn font-mono text-[#DC2626] hover:underline" data-val="SN-IPHONE16PRO-8899">SN-IPHONE16PRO-8899</button>
+            <span>•</span>
+            <button type="button" class="quick-serial-btn font-mono text-[#DC2626] hover:underline" data-val="0901000003">0901000003</button>
             <span>•</span>
             <button type="button" class="quick-serial-btn font-mono text-[#DC2626] hover:underline" data-val="SN-DK-9K-481923">SN-DK-9K-481923</button>
-            <span>•</span>
-            <button type="button" class="quick-serial-btn font-mono text-[#DC2626] hover:underline" data-val="0912345678">0912345678</button>
           </div>
         </form>
       </div>
@@ -88,9 +106,21 @@ export function initWarrantyPage() {
   }
 }
 
+function buildLookupParams(rawQuery) {
+  const q = String(rawQuery || "").trim();
+  if (!q) return { phone: "", serialNo: "" };
+
+  const digitsOnly = q.replace(/\s+/g, "");
+  if (/^\d{9,11}$/.test(digitsOnly)) {
+    return { phone: digitsOnly, serialNo: "" };
+  }
+
+  return { phone: "", serialNo: q };
+}
+
 function bindWarrantyEvents() {
-  const form = document.getElementById('warranty-search-form');
-  const input = document.getElementById('warranty-input');
+  const form = document.getElementById("warranty-search-form");
+  const input = document.getElementById("warranty-input");
 
   if (form && input) {
     form.onsubmit = (e) => {
@@ -100,7 +130,7 @@ function bindWarrantyEvents() {
     };
   }
 
-  document.querySelectorAll('.quick-serial-btn').forEach(btn => {
+  document.querySelectorAll(".quick-serial-btn").forEach((btn) => {
     btn.onclick = () => {
       const val = btn.dataset.val;
       if (input) input.value = val;
@@ -110,7 +140,7 @@ function bindWarrantyEvents() {
 }
 
 async function executeLookup(query) {
-  const resultArea = document.getElementById('warranty-result-area');
+  const resultArea = document.getElementById("warranty-result-area");
   if (!resultArea) return;
 
   resultArea.innerHTML = `
@@ -121,10 +151,19 @@ async function executeLookup(query) {
   `;
   window.lucide?.createIcons();
 
-  const res = await mockService.lookupWarranty(query);
-  const w = Array.isArray(res) ? res[0] : (res?.found ? res.data : null);
+  let w = null;
+  try {
+    const params = buildLookupParams(query);
+    const res = await apiClient.lookupWarranty(params);
+    const list = unwrapWarrantyList(res).map(toWarranty).filter(Boolean);
+    w = list[0] || null;
+  } catch (err) {
+    toast.error(err?.message || "Không thể tra cứu thông tin bảo hành.");
+    w = null;
+  }
 
   if (w) {
+    const displaySerial = w.serialNo || w.serialNumber || w.seriNo || query;
     resultArea.innerHTML = `
       <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs animate-in fade-in duration-200">
         <!-- Banner kết quả hợp lệ -->
@@ -139,7 +178,7 @@ async function executeLookup(query) {
             </div>
           </div>
           <span class="px-3 py-1 rounded-full text-xs font-black bg-white text-emerald-800 shadow-xs">
-            ${esc(w.statusText || 'ĐANG TRONG THỜI HẠN BẢO HÀNH')}
+            ${esc(w.statusText || "ĐANG TRONG THỜI HẠN BẢO HÀNH")}
           </span>
         </div>
 
@@ -148,11 +187,11 @@ async function executeLookup(query) {
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
             <div>
               <span class="text-slate-500 block mb-0.5">Số Seri Máy (Serial No):</span>
-              <span class="font-mono font-black text-slate-900 text-sm sm:text-base">${esc(w.serialNo || w.serialNumber)}</span>
+              <span class="font-mono font-black text-slate-900 text-sm sm:text-base">${esc(displaySerial)}</span>
             </div>
             <div>
               <span class="text-slate-500 block mb-0.5">Mã đơn hàng gốc:</span>
-              <span class="font-mono font-bold text-[#DC2626] text-sm">${w.orderCode ? esc(w.orderCode) : '#DH' + (w.orderId || '')}</span>
+              <span class="font-mono font-bold text-[#DC2626] text-sm">${w.orderCode ? esc(w.orderCode) : "#DH" + (w.orderId || "")}</span>
             </div>
             <div>
               <span class="text-slate-500 block mb-0.5">Khách hàng đăng ký:</span>
@@ -167,7 +206,7 @@ async function executeLookup(query) {
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-center">
             <div class="p-3 bg-red-50/50 rounded-xl border border-red-100">
               <span class="text-[11px] text-slate-500 block mb-1">Ngày mua & Lắp đặt</span>
-              <strong class="text-slate-900 text-xs sm:text-sm font-mono block">${formatDate(w.activatedDate)}</strong>
+              <strong class="text-slate-900 text-xs sm:text-sm font-mono block">${w.activatedDate ? formatDate(w.activatedDate) : "—"}</strong>
             </div>
             <div class="p-3 bg-red-50/50 rounded-xl border border-red-100">
               <span class="text-[11px] text-slate-500 block mb-1">Thời hạn bảo hành</span>
@@ -175,7 +214,7 @@ async function executeLookup(query) {
             </div>
             <div class="p-3 bg-red-50/50 rounded-xl border border-red-100">
               <span class="text-[11px] text-slate-500 block mb-1">Hết hạn bảo hành</span>
-              <strong class="text-slate-900 text-xs sm:text-sm font-mono block">${formatDate(w.expireDate)}</strong>
+              <strong class="text-slate-900 text-xs sm:text-sm font-mono block">${w.expireDate ? formatDate(w.expireDate) : "—"}</strong>
             </div>
           </div>
 
@@ -185,23 +224,31 @@ async function executeLookup(query) {
               <i data-lucide="wrench" class="w-4 h-4 text-[#DC2626]"></i>
               <span>Nhật Ký Bảo Trì & Sửa Chữa Tại Showroom</span>
             </h4>
-            ${w.history && w.history.length > 0 ? `
+            ${
+              w.history && w.history.length > 0
+                ? `
               <div class="border border-slate-200 rounded-xl divide-y divide-slate-100 overflow-hidden">
-                ${w.history.map(h => `
+                ${w.history
+                  .map(
+                    (h) => `
                   <div class="p-3 bg-white flex justify-between items-center text-xs">
                     <div>
                       <p class="font-bold text-slate-800">${esc(h.action)}</p>
-                      <p class="text-slate-500 text-[11px]">Kỹ thuật viên: ${esc(h.technician || 'Showroom Pha Hằng')}</p>
+                      <p class="text-slate-500 text-[11px]">Kỹ thuật viên: ${esc(h.technician || "Showroom Pha Hằng")}</p>
                     </div>
                     <span class="text-slate-400 font-mono text-[11px]">${formatDate(h.date)}</span>
                   </div>
-                `).join('')}
+                `,
+                  )
+                  .join("")}
               </div>
-            ` : `
+            `
+                : `
               <div class="p-4 rounded-xl bg-slate-50 text-slate-500 text-center border border-slate-200">
                 <p>Thiết bị chưa có lịch sử sửa chữa hoặc phát sinh lỗi bảo hành. Tình trạng hoạt động hoàn hảo.</p>
               </div>
-            `}
+            `
+            }
           </div>
 
           <!-- Hotline hỗ trợ bảo hành tận nơi -->
